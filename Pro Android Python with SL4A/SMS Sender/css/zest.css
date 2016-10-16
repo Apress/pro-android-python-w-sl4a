@@ -1,0 +1,182 @@
+body {
+	width:100%;
+	padding: 0;
+	font-size: 14px;
+	background: black;
+	color:white;
+	font-family: Arial;
+}
+button{
+	color:white;
+	background: transparent;
+	border: solid 1px #2986a5;
+}
+.nodisplay {
+	display:none;
+}
+.col { float: left; }
+.width-100 { width:100%; }
+.width-50 { width:50%; }
+.width-33{ width:33%; }
+.width-25{ width:25%; }
+h1 {
+	font-size: 16px;
+	border-bottom: dotted 1px #2986a5;
+}
+div.delimiter{
+	border-bottom:solid 1px black;
+}
+.valid{
+	color: green;
+}
+.invalid{
+	color:red;
+}
+div#menu {
+	background-image: url("../images/tab-bg.png");
+	background-repeat: repeat-x;
+	color: white;
+	font-weight: bold;
+	height: 96px;
+}
+div#menu div.current {
+	background-image: url("../images/tab-bg-current.png");
+	background-repeat: repeat-x;
+}
+div.icon {
+	height: 67px;
+	width: 100%;
+	background-repeat: no-repeat;
+	background-position: top center;
+}
+
+div#bFile div.icon {
+	background-image: url("../images/file-tab.png");
+}
+div#bSetup div.icon {
+	background-image: url("../images/setup-tab.png");
+}
+div#bText div.icon {
+	background-image: url("../images/text-tab.png");
+}
+div#bMerge div.icon {
+	background-image: url("../images/merge-tab.png");
+}
+
+div#bFile.current div.icon {
+	background-image: url("../images/file-tab-current.png");
+}
+
+div#bSetup.current div.icon {
+	background-image: url("../images/setup-tab-current.png");
+}
+
+div#bText.current div.icon {
+	background-image: url("../images/text-tab-current.png");
+}
+div#bMerge.current div.icon {
+	background-image: url("../images/merge-tab-current.png");
+}
+
+div.tabs {
+	text-align: center;
+	height: 100%;
+	background: transparent;
+	vertical-align: middle;
+}
+
+#csvfile {
+	font-style: italic;
+}
+
+#content p {
+	padding: 0px 1em;
+}
+
+#content table{
+	border-collapse: collapse;
+}
+
+#content table tr th,
+#content table tr td {
+	border: solid 1px white;
+}
+
+#content table tr th {
+	background: #2986a5;
+}
+
+#content table tr td {
+	padding: 2px;
+	vertical-align: top;
+}
+
+#filebrowser {
+	width: 95%;
+	position: absolute;
+	top: 10px;
+	background: black;
+	border: solid 1px #2986a5;
+	padding-left: 5px;
+}
+
+#closeButton {
+	width: 12px;
+	height: 12px;
+	float: right;
+	font-weight: bold;
+	border: solid 1px #2986a5;
+	margin: 5px 5px 0px 0px;
+	text-align: center;
+}
+
+dt.folder {
+	background-image: url("../images/folder.png");
+	background-repeat: no-repeat;
+}
+
+dd dl {
+	margin-left: 10px;
+}
+
+dt {
+	margin-top: 10px;
+	font-size: 1em;
+	padding-left: 16px;
+}
+
+dt.current {
+	background: #2986a5;
+	font-weight:bold;
+}
+
+dd {
+	margin: 0px;
+}
+
+dl {
+	margin-bottom: 10px;
+}
+
+dt.file {
+	background-image: url("../images/txt.png");
+	background-repeat: no-repeat;
+}
+
+li {
+	color: white;
+	background-repeat: no-repeat;
+	background-position: top left;
+}
+
+ul li {
+	padding: 0px;
+}
+
+li.empty {
+	font-style: italic;
+}
+
+input {
+	margin-left: 10px;
+}

@@ -1,0 +1,25 @@
+<html>
+    <head>
+    </head>
+    <body>
+        <h1>Contacts</h1>
+        <table id="contacts"></table>
+        <script type="text/javascript">
+            var droid = new Android();
+            function call(number){
+                droid.phoneDialNumber(number);
+            }
+            var contacts = droid.contactsGet(['display_name', 'primary_phone']);
+            var container = document.getElementById('contacts');
+            for (var i=0;i<=contacts.result.length;i++){
+                var data = contacts.result[i];
+                contact = '<tr>';
+                contact += '<th>' + data[0] + '</th>';
+                contact += '<td><a href="#" onclick="call(' + data[1] + 
+                           ');return false;">' + data[1] + '</a></td>';
+                contact += '</tr>';
+                container.innerHTML = container.innerHTML + contact;
+            }
+        </script>
+    </body>
+</html>

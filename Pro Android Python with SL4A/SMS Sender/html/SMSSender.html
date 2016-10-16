@@ -1,0 +1,563 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-gb" lang="en-gb" dir="ltr" > 
+<head> 
+  <title>SMS Sender</title> 
+  <script type="text/javascript" src="./js/mootools.js"></script>
+  <link type="text/css" rel="stylesheet" href="./css/zest.css"></link>
+  <script language="javascript" type="text/javascript">
+	var droid=new Android(),handler,setup,
+	UIHandler = new Class({
+		"initialize":function(){
+			this.last = null;
+		},
+		"post": function( data ) {
+			droid.postEvent("python", Json.toString(data) );
+		},
+		"postAndWait":function( data, timeout ){
+			if(this.last==null || $time()-this.last > 200){
+				last=$time();
+				this.post(data);
+				var a;
+				if(timeout){
+					a = droid.waitForEvent( "javascript", timeout );
+				} else {
+					a = droid.waitForEvent( "javascript" );
+				}
+				
+				if( a.result ) {
+					return Json.evaluate(a.result.data);
+				} else {
+					return {};
+				}
+			} else {
+				this.postAndWait.delay($time()-this.last,this,[data,timeout]);
+			}
+		},
+		"alert":function(title,message){
+			droid.dialogCreateAlert(title,message);
+			droid.dialogShow();
+			droid.dialogGetResponse();
+		},
+		"startLoad":function(title, message){
+			droid.dialogCreateSpinnerProgress(title, message)
+			droid.dialogShow()
+		},
+		"stopLoad":function(){
+			droid.dialogDismiss()
+		}
+	}),
+	FileBrowser = new Class({
+		"base":"sdcard",
+		"initialize":function(el){
+			this.root = el;
+			el.getElement(".close").addEvent("click",this.close.bind(this));
+			this.type = "txt";
+			this.container = el.getElement(".contents");
+		},
+		"setTitle":function(title){
+			this.root.getElement(".title").setText(title);
+			return this;
+		},
+		"listdir":function(path){
+			var resp = handler.postAndWait({"task":"listdir","path":path,"type":this.type});
+			return resp;
+		},
+		"show":function(){
+			this.root.removeClass("nodisplay");
+			files = this.listdir( this.getFullPath()+this.base );
+			this.directory = new Directory( this.base, files, this, this.container.empty() );
+			return this;
+		},
+		"close":function(){
+			this.root.addClass("nodisplay");
+		},
+		"onClose":function(a){ this.close(); },
+		"getFullPath":function(){
+			return "/";
+		},
+		"setType":function(type){
+			this.type = type;
+			return this;
+		},
+		"setCurrent":function(element){
+			if(this.current){
+				this.current.removeClass("current");
+			}
+			this.current = element;
+		}
+	}),
+	
+	Directory = new Class({
+		"initialize":function(path,contents,parent,container){
+			this.path = path;
+			this.parent = parent;
+			this.contents = contents;
+			this.container = container;
+			this.render();
+		},
+		"render":function(){
+			this.dl = new Element("dl");
+			if(this.contents.folders.length>0 || this.contents.files.length>0){
+				this.contents.folders.each(function(f){
+					var dd = new Element("dd"),dt=new Element("dt").setText(f).addClass("folder");
+					this.dl.adopt(dt.addEvent("click",function(){
+						this.setCurrent(dt);
+						if(dt.hasClass("open")){
+							dd.empty().addClass("nodisplay");
+						} else{
+							var resp = this.listdir( this.getFullPath()+f );
+							new Directory(f, resp, this, dd.removeClass("nodisplay") );
+						}
+						dt.toggleClass("open");
+					}.bind(this))).adopt(dd);
+				}.bind(this));
+				this.contents.files.each(function(f){
+					this.dl.adopt(new Element("dt").addClass("file").setText(f).addEvent("click",function(){
+						this.parent.onClose(this.getFullPath()+"/"+f);
+						this.setCurrent(dt);
+					}.bind(this))).adopt(new Element("dd"));
+				}.bind(this));
+			} else {
+				this.dl.adopt(new Element("dt").addClass("empty").setText("No files or folders"));
+			}
+			this.container.adopt(this.dl);
+		},		
+		"listdir":function(path){
+			return this.parent.listdir(path);
+		},
+		"getFullPath":function(){
+			return this.parent.getFullPath()+this.path+"/";
+		},
+		"setCurrent":function(element){
+			this.parent.setCurrent(element);
+		},
+		"onClose":function(path){
+			this.parent.onClose(path);
+		}
+	}),
+	
+	Config = new Class({
+		"initialize":function(container,button){
+			this.container = container;
+			this.sections = [];
+			this.button = button.addEvent("click",this.save.bind(this));
+		},
+		"serialize": function(){
+			sections = {};
+			this.sections.each(function(section){
+				sections[section.name] = section.serialize();
+			});
+			return sections;
+		},
+		"save":function(){
+			handler.startLoad();
+			sections = this.serialize();
+			var resp = handler.postAndWait({"task":"saveconfig","sections":sections});
+			handler.stopLoad();
+			if( resp.error == "" ) {
+				handler.alert("Success", "Successfully saved configuration");
+			} else{
+				handler.alert("Error", "Unable to save configuration: " + resp.error);
+			}
+		},
+		"clear":function(){
+			this.sections = [];
+			this.container.empty();
+		},
+		"addSection":function(name,options){
+			this.sections.include( new Section(name,options,this).render() );
+		},
+		"get":function(section, option){
+			var sections = this.sections,l=sections.length,thesection=null,theoption=null;
+			for( i=0; i<l; i++ ){
+				if(sections[i].name == section){
+					thesection = sections[i];
+					break;
+				}
+			}
+			if( thesection ){
+				var options = picked.options,l=options.length;
+				for( i=0; i<l; i++ ){
+					if(options[i].name == option){
+						theoption = options[i].getValue();
+						break;
+					}
+				}
+			}
+			return theoption;
+		}
+	}),
+	
+	Section = new Class({
+		"initialize":function(name, options, parent){
+			this.parent = parent;
+			this.name = name;
+			this.options = [];
+			options.each(function(option){
+				this.options.include( new Option(option.name,option.value,option.description,this ) );
+			}.bind(this));
+			return this;
+		},
+		"render":function(){
+			this.container = new Element("div").addClass("section");
+			this.container.adopt(new Element("h1").setText(this.name));
+			this.options.each(function(option){
+				option.render();
+			});
+			this.parent.container.adopt(this.container);
+			return this;
+		},
+		"serialize":function(){
+			options = {};
+			this.options.each(function(option){
+				options[option.name] = option.getValue();
+			});
+			return options;
+		}
+	}),
+	
+	Option = new Class({
+		"initialize":function(name, value, description, parent){
+			this.name = name;
+			this.value = value;
+			this.parent = parent;
+			this.description = description;
+			return this;
+		},
+		"render":function(){
+			this.input = new Element("input",{"size":this.value.length}).setProperty("value",this.value);
+			this.parent.container.adopt(new Element("div").addClass("option").adopt(new Element("span").setText(this.name).addEvent("click",function(){
+				handler.alert("Option "+this.name,this.description);
+			}.bind(this))).adopt(this.input));
+		},
+		"getValue":function(){
+			return this.input.getValue();
+		}
+	});
+	
+	handler = new UIHandler();
+	window.addEvent("domready",function(){
+		var buttons = {"saveconfig":$("bSaveConfig"),"file":$("bFile"),"setup": $("bSetup"),"importText":$("bChooseText"),"textTab":$("bText"),"merge":$("bMerge"),"validate":$("bValidate"),"process":$("bProcess"), "importCSV":$("bCSV"),"closebrowser":$("closeButton")},
+			divs = {"preview":$("dPreview"),"filebrowser":$("filebrowser"),"browsercontent":$("browserContent"),"fileTab":$("dFile"),"fields":$("dFields"),"csvFilename":$("csvfile"),"setupTab":$("dSetup"),"textTab":$("dText"),"mergeTab":$("dCSVMerged")},
+		dta=divs.textTab.getElement("textarea"),browserTitle=$("browserTitle"),
+		tabs=[divs.setupTab,divs.mergeTab,divs.textTab,divs.fileTab],
+		tabButtons=[buttons.setup,buttons.merge,buttons.textTab,buttons.file],
+		validSpan=$("wValid"),invalidSpan=$("wInvalid"),valid=[validSpan,invalidSpan],
+		templateRow=$("templateTable").getElement("tr");
+		tabButtons.each(function(button,k){
+			var current = "current";
+			button.addEvent("click",function(){
+				if(!button.hasClass(current)){
+					removeClassFromAll(tabButtons,current);
+					button.addClass(current);
+					showOne(tabs,tabs[k]);
+				}
+			});
+		});
+		filebrowser = new FileBrowser(divs.filebrowser);
+		setup = new Config(divs.setupTab.getElement("div"),buttons.saveconfig);
+		/* 
+		* Merge tab button event
+		* On Click, checks that CSV is loaded, checks that template text is loaded.
+		* Then fires an event to request Python to merge all SMS
+		* Receives sms as object {number,message} and displays them in a table
+		*/
+		buttons.merge.addEvent("click",function(){
+			if(!csvLoaded()){
+				if(loadCsv()){
+					buttons.file.fireEvent("click");
+					buttons.importCSV.fireEvent("click");
+				}
+			} else {
+				var text=dta.getValue();
+				if(text == ""){
+					textNeeded();
+					buttons.textTab.fireEvent("click");
+				} else {
+					handler.startLoad("Processing", "Merging")
+					showOne(tabs,divs.mergeTab);
+					phone = getMergeFields().phone;
+					var resp = handler.postAndWait( {"task":"merge", "text":text.replace("\n","\\u000A"), "phone":phone });
+					if(resp.task=="edittext"){
+						buttons.textTab.fireEvent("click");
+						dta.fireEvent("click");
+					}else{
+						clearMergedSamples();
+						var table = divs.mergeTab.getElement("table");
+						resp.messages.each(function(m){
+							var clone = templateRow.clone();
+							clone.getElement("td.phone").setText(m.number);
+							clone.getElement("td.message").setText(m.message);
+							table.adopt(clone);
+						});
+					}
+					handler.stopLoad();
+				}
+			}
+		});
+		/* 
+		* Process button event
+		* On Click, takes the keys displayed messages that have a ticked checkbox
+		* Fires an event to request Python to actually send the SMSs
+		*/
+		buttons.process.addEvent("click",function(){
+			// Find out position of rows in which checkbox is checked
+			var send=[];
+			divs.mergeTab.getElements( "tr.td" ).each(function(row,position){
+				if( row.getElement("input[type=checkbox]").getProperty("checked") ) {
+					send.include(position);
+				}
+			});
+			if( send.length > 0 ) {
+				var resp = handler.postAndWait({"task":"send","which":send});
+				alert( resp.count + " messages sent" );
+			} else {
+				alert( "No SMS to send" );
+			}
+		});
+		dta.addEvent("change",function(){
+			hideAll(valid);
+		});
+		buttons.textTab.addEvent("click",function(){
+			showOne(tabs,divs.textTab);
+		});
+		// Clicking on the Validate button
+		buttons.validate.addEvent("click",function(){
+			if( !csvLoaded() ){
+				if( loadCsv() ) {
+					buttons.file.fireEvent("click");
+					buttons.importCSV.fireEvent("click");
+				}
+			} else{
+				var text = dta.getValue();
+				if(text==""){
+					textNeeded();
+				} else {
+					// get the key of the phone number
+					var resp = handler.postAndWait( {"task": "validate", "phone": getMergeFields().phone, "text": text.replace("\n","\\u000A") } )
+					if(resp.missing.length>0){
+						showOne(valid,invalidSpan);
+						invalidSpan.getElement("span").setText( resp.missing.join(",") );
+					}else{
+						showOne(valid,validSpan);
+					}
+				}
+			}
+		});
+		// clicking on the import button in the text tab
+		buttons.importText.addEvent("click",function(){
+			// Override the onClose function to use the path of the text file
+			filebrowser.onClose = function(a) {
+				var resp = handler.postAndWait({"task":"loadfilecontent","path":a});
+				dta.setText(resp.content);
+				filebrowser.close();
+			}
+			filebrowser.setType("txt").setTitle("Load template text from file" ).show();
+		});
+		buttons.importCSV.addEvent("click",function(){
+			// Override the onClose function to use the path of the CSV file
+			filebrowser.onClose = function(a) {
+				if(a){
+					handler.startLoad("Loading","Loading CSV file");
+					var resp = handler.postAndWait({"task":"loadfile","path":a});
+					if(resp.error==""){
+						// resp.filename will definitely be same as a?
+						if(resp.filename!=""){
+							clearMergedSamples();
+							divs.csvFilename.setText( resp.filename );
+							divs.fields.removeClass("nodisplay").getElement("div").remove();
+							var newdiv = new Element("div").addClass("col").addClass("width-100");
+							resp.fields.each(function(r, k){
+								newdiv.adopt(new Element("div").addClass("col")
+									.adopt(new Element("input",{"type":"radio","name":"iField"}).addEvent("click",function(){hideAll(valid);})).adopt(new Element("span").setText(r))
+								);
+							});
+							divs.fields.adopt(newdiv);
+							// Select the first item
+							divs.fields.getElement("input").setProperty("checked",true);
+							// More information about the loaded file
+							$("dialectQuotechar").setText(resp.quotechar);
+							$("dialectDelimiter").setText(resp.delimiter);
+							$("dialectLineterminator").setText(resp.lineterminator);
+							// Preview
+							var t=new Element("table",{"cellpadding":"0","border":"0"}),th=new Element("tr");
+							resp.fields.each(function(v){
+								th.adopt(new Element("th").setText(v));
+							});
+							t.adopt(th);
+							resp.rows.each(function(v){
+								var tr=new Element("tr");
+								v.each(function(w){
+									tr.adopt(new Element("td").setText(w));
+								});
+								t.adopt(tr);
+							});
+							divs.preview.empty().adopt(t);
+						}
+					}else{
+						handler.alert("CSV import error",resp.error);
+					}
+					handler.stopLoad();
+				}
+				filebrowser.close();
+			}
+			filebrowser.setType("csv").setTitle("Load CSV file" ).show();
+		});
+		buttons.setup.addEvent("click",function(){
+			handler.startLoad( "Loading", "Loading configuration" );
+			var resp = handler.postAndWait( { "task": "loadconfig" } );
+			setup.clear();
+			// We get an object that contains all sections, itself containing all options.
+			$H(resp.sections).each(function(options,section){
+				setup.addSection(section, options);
+			});
+			handler.stopLoad();
+		});
+		
+		// Click on setup tab
+		buttons.setup.fireEvent("click");
+		function getMergeFields() {
+			var radios=divs.fields.getElements("input[type=radio]");
+			if(radios.length==0){
+				return false;
+			}else{
+				var fields=[],phone=null;
+				radios.each(function(v,k){
+					if(!v.getProperty("checked")){
+						fields.include(k);
+					}else{
+						phone=k;
+					}
+				});
+				return {"fields":fields,"phone":phone};
+			}
+		}
+		
+		function loadFileContent(file){
+			var resp = handler.postAndWait( {"task": "loadfilecontent", "path": file} );
+			dta.setText(resp.content);
+		}
+		
+		function loadCsv(){
+			droid.dialogCreateAlert("No CSV file", "No CSV file has been loaded. Load now?");
+			droid.dialogSetPositiveButtonText("Yes");
+			droid.dialogSetNegativeButtonText("No");
+			droid.dialogShow();
+			var r=droid.dialogGetResponse();
+			// User wishes to load now
+			if(r.result.which=="positive"){
+				return true;
+			} else {
+				return false;
+			}
+		}
+		function textNeeded(){
+			alert("No text was found. Please type into the textarea or import from a file");
+		}
+		function clearMergedSamples(){
+			divs.mergeTab.getElements("tr.td").each(function(e){
+				e.remove();
+			});
+		}
+		function csvLoaded(){
+			return !(divs.csvFilename.getText() == "" );
+		}
+		function addClassToAll(elements,classname){
+			elements.each(function(e){
+				e.addClass(classname);
+			});
+		}
+		function removeClassFromAll(elements,classname){
+			elements.each(function(e){
+				e.removeClass(classname);
+			});
+		}
+		function hideAll(a){
+			addClassToAll(a,"nodisplay");
+		}
+		function showOne(a,b){
+			hideAll(a);
+			b.removeClass("nodisplay");
+		}
+			
+	});
+	</script>
+</head>
+<body class="col width-100">
+<div id="filebrowser" class="nodisplay">
+	<div id="closeButton" class="close">x</div>
+	<div class="col width-100">
+		<div class="col width-100">
+			<h1 class="title" id="browserTitle"></h1>
+		</div>
+		<div id="browserContent" class="col width-100 contents"></div>
+	</div>
+</div>
+<div class="col width-100" id="menu">
+	<div class="col tabs width-25" id="bSetup">
+		<div class="icon"></div>Setup
+	</div>
+	<div class="col tabs width-25" id="bFile">
+		<div class="icon"></div>File
+	</div>
+	<div class="col tabs width-25" id="bText">
+	<div class="icon"></div>Text
+	</div>
+	<div class="col tabs width-25" id="bMerge">
+	<div class="icon"></div>Merge
+	</div>
+</div>
+<div class="col width-100" id="content">
+	<div id="dSetup" class="nodisplay col width-100">
+		<h1>Setup</h1>
+		<button id="bSaveConfig">Save configuration</button>
+		<div></div>
+	</div>
+	<div id="dFile" class="nodisplay col width-100">
+		<h1>File - <button id="bCSV">Load</button></h1>
+		<p class="col width-100" id="csvfile"></p>
+		<div class="col width-100 nodisplay" id="dFields">
+			<h1>Fields (select phone number column):</h1>
+			<div></div>
+		</div>
+		<div class="col width-100">
+			<h1>File dialect:</h1>
+			<p>End of line character: <span id="dialectLineterminator"></span></p>
+			<p>Quote character: <span id="dialectQuotechar"></span></p>
+			<p>Field delimiter: <span id="dialectDelimiter"></span></p>
+		</div>
+		<div class="col width-100">
+			<h1>File preview:</h1>
+			<div id="dPreview"></div>
+		</div>
+	</div>
+	<div id="dText" class="nodisplay col width-100">
+		<h1>Text - <button id="bChooseText">From file</button></h1>
+		<div class="col width-100">
+			<textarea></textarea>
+			<button id="bValidate">Validate</button>
+		</div>
+		<span class="valid nodisplay" id="wValid">Text used all recognized merge fields</span>
+		<span class="invalid nodisplay" id="wInvalid">Text does not use all merge fields: <span></span></span>
+	</div>
+	<div id="dCSVMerged" class="nodisplay col width-100">
+		<h1>Merged - <button id="bProcess">Send</button></h1>
+		<div>
+			<table cellpadding="0" border="0">
+				<tr>
+					<th></th>
+					<th>Phone</th>
+					<th>Message</th>
+				</tr>
+			</table>
+		</div>
+	</div>
+</div>
+<table class="nodisplay" id="templateTable">
+	<tr class="td">
+		<td class="checkbox"><input type="checkbox" checked="checked" /></td>
+		<td class="phone"></td>
+		<td class="message"></td>
+	</tr>
+</table>
+</body>

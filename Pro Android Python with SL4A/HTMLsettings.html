@@ -1,0 +1,67 @@
+<html>
+<head>
+    <style>
+        #body {width:100%;}
+        .container {text-align:center;margin:auto;}
+        .container div {text-align:left;width:75%;}
+        h1 {text-align:center;margin:auto;}
+        hr {width:75%;margin:0px auto;}
+        label {display:block;float:left;width:60%;}
+        .buttons div {text-align:center;margin:auto;}
+    </style>
+    <script type="text/javascript">
+        var droid = new Android();
+
+        function post_data(){
+            var values = [
+                ['airplane', document.getElementById('airplane_mode').value],
+                ['wifi', document.getElementById('wifi_on').value],
+                ['screen', document.getElementById('screen').value],
+            ];
+            
+            var q = '?';
+            for (i=0;i<values.length;i++){
+                var k = values[i][0];
+                var v = values[i][1];
+                if (q != '?'){
+                    q = q + '&';
+                }
+                q = q + k + '=' + v;
+            }
+            
+            droid.postEvent('save', q);
+        }
+    </script>
+</head>
+
+<body>
+<div id="body">
+<h1>My Settings</h1>
+<form onsubmit="post_data();return false;">
+    <div class="container">
+        <div>
+            <label for="airplane_mode">Airplane Mode</label>
+            <input id="airplane_mode" name="radio" type="radio" />
+        </div>
+        <div>
+            <label for="wifi_on">WiFi On</label>
+            <input id="wifi_on" name="radio" type="radio" />
+        </div>
+    </div>
+    <div class="container">
+        <div>
+            <label for="screen">Screen On</label>
+            <input id="screen" type="checkbox" />
+        </div>
+    </div>
+    <div class="container buttons">
+        <div>
+            <input size="5" id="save" name="save" type="submit" value="Save Settings" />
+            <input size="5" id="cancel" name="cancel" type="button" value="Cancel" />
+        </div>
+    </div>
+</form>
+</div>
+</body>
+
+</html>

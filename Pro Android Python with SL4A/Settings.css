@@ -1,0 +1,9 @@
+    <style>
+        #body {width:100%;}
+        .container {text-align:left;margin:auto;}
+        .container div {text-align:left;width:75%;}
+        h1 {text-align:left;margin:auto;}
+        hr {width:75%;margin:0px auto;}
+        label {display:block;float:left;width:60%;}
+        .buttons div {text-align:center;margin:auto;}
+    </style>
